@@ -15,7 +15,7 @@
 
 ---
 
-> **A fully autonomous, GPS + vision-guided drop pod** carried under the wing of an RC aircraft. Released on operator command, it navigates to a red carpet landing zone using GPS macro-guidance and nose-mounted optical terminal tracking — nose-first impact.
+> **A fully autonomous, GPS + vision-guided drop pod** carried under the wing of an RC aircraft. Released on operator command, it navigates to a red carpet landing zone using GPS macro-guidance and nose-mounted optical terminal tracking, nose-first impact.
 
 ---
 
@@ -35,7 +35,6 @@
 12. [Safety & Legal](#safety--legal)
 13. [Contributing](#contributing)
 14. [Roadmap](#roadmap)
-15. [Team & Credits](#team--credits)
 
 ---
 
@@ -109,17 +108,17 @@ The **Drop Pod** is a actively guided aerial payload delivery system. It is:
 │  │                                     │                   │
 │  │  Matek F405-WING (ArduPlane)        │ ← PID + Servos    │
 │  │  ├─ IMU ICM-42688 (SPI)             │                   │
-│  │  ├─ GPS u-blox M10 (UART)          │                    │
-│  │  ├─ Baro BMP388 (I2C)              │                    │
-│  │  └─ 4× Servo PWM outputs           │                    │
+│  │  ├─ GPS u-blox M10 (UART)           │                   │
+│  │  ├─ Baro BMP388 (I2C)               │                   │
+│  │  └─ 4× Servo PWM outputs            │                   │
 │  │                                     │                   │
 │  │  4× Canard Fins (cruciform)         │ ← Actuation       │
-│  │  Emax ES9051 · 2.0 kg·cm           │                    │
+│  │  Emax ES9051 · 2.0 kg·cm            │                   │
 │  └─────────────────────────────────────┘                   │
 │                                                            │
 │  [MID SECTION — POWER + COMMS]                             │
 │  ┌─────────────────────────────────────┐                   │
-│  │  3S 1000mAh LiPo (11.1V)           │ ← Main power       │
+│  │  3S 1000mAh LiPo (11.1V)            │ ← Main power      │
 │  │  Pololu 5V BEC ×2                   │                   │
 │  │  ELRS Receiver (2.4GHz SBUS)        │ ← RC commands     │
 │  │  SiK 915MHz Telemetry               │ ← GCS MAVLink     │
