@@ -15,7 +15,7 @@
 
 ---
 
-> **A fully autonomous, GPS + vision-guided drop pod** carried under the wing of an RC aircraft. Released on operator command, it navigates to a red carpet landing zone using GPS macro-guidance and nose-mounted optical terminal tracking — nose-first impact, cushion-assisted landing. No propulsion. No parachute. Pure precision.
+> **A fully autonomous, GPS + vision-guided drop pod** carried under the wing of an RC aircraft. Released on operator command, it navigates to a red carpet landing zone using GPS macro-guidance and nose-mounted optical terminal tracking — nose-first impact.
 
 ---
 
@@ -41,7 +41,7 @@
 
 ## What This Is
 
-The **Drop Pod** is a passively propelled, actively guided aerial payload delivery system. It is:
+The **Drop Pod** is a actively guided aerial payload delivery system. It is:
 
 - **Carried** under the wing of any medium RC aircraft (minimum 1.5 kg payload capacity)
 - **Released** on operator command (RC transmitter aux channel or GCS MAVLink command)
@@ -49,7 +49,7 @@ The **Drop Pod** is a passively propelled, actively guided aerial payload delive
 - **Optically locked** onto a red carpet marker using a nose-mounted camera running real-time OpenCV detection
 - **Nose-impact landed** — the pod dives nose-first onto the cushioned target
 
-**Phase 1 scope (this repository):** GPS approach + optical lock + direct nose-impact. No flare. No glide slope. Ground team places a foam/air cushion on the red carpet. The pod hits it clean.
+**Phase 1 scope (this repository):** GPS approach + optical lock + direct nose-impact. 
 
 ---
 
@@ -82,8 +82,8 @@ The **Drop Pod** is a passively propelled, actively guided aerial payload delive
 | **Idle** | Passive on wing | Any | — |
 | **Armed** | Monitoring | Any | ARM command |
 | **Released** | Stabilised descent | Drop alt | DROP command + reach check |
-| **GPS Approach** | GNSS-guided | Drop → 40 m AGL | Automatic post-release |
-| **Optical Lock** | Camera tracking | 40 m → impact | Barometer threshold |
+| **GPS Approach** | GNSS-guided | Drop → 40 m AGL | Automatic post-releas  |
+| **Optical Lock** | Camera tracking | 40 m → impact | Barometer threshold  |
 | **Landed** | Inert | 0 | Impact detection (accel) |
 
 ---
@@ -109,20 +109,20 @@ The **Drop Pod** is a passively propelled, actively guided aerial payload delive
 │  │                                     │                   │
 │  │  Matek F405-WING (ArduPlane)        │ ← PID + Servos    │
 │  │  ├─ IMU ICM-42688 (SPI)             │                   │
-│  │  ├─ GPS u-blox M10 (UART)          │                   │
-│  │  ├─ Baro BMP388 (I2C)              │                   │
-│  │  └─ 4× Servo PWM outputs           │                   │
+│  │  ├─ GPS u-blox M10 (UART)          │                    │
+│  │  ├─ Baro BMP388 (I2C)              │                    │
+│  │  └─ 4× Servo PWM outputs           │                    │
 │  │                                     │                   │
 │  │  4× Canard Fins (cruciform)         │ ← Actuation       │
-│  │  Emax ES9051 · 2.0 kg·cm           │                   │
+│  │  Emax ES9051 · 2.0 kg·cm           │                    │
 │  └─────────────────────────────────────┘                   │
 │                                                            │
 │  [MID SECTION — POWER + COMMS]                             │
 │  ┌─────────────────────────────────────┐                   │
 │  │  3S 1000mAh LiPo (11.1V)           │ ← Main power       │
 │  │  Pololu 5V BEC ×2                   │                   │
-│  │  ELRS Receiver (2.4GHz SBUS)        │ ← RC commands      │
-│  │  SiK 915MHz Telemetry               │ ← GCS MAVLink      │
+│  │  ELRS Receiver (2.4GHz SBUS)        │ ← RC commands     │
+│  │  SiK 915MHz Telemetry               │ ← GCS MAVLink     │
 │  └─────────────────────────────────────┘                   │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -142,7 +142,7 @@ GCS (laptop)   ──MAVLink/915MHz───────────────
                                                │      │
                                          CSI-2 │      │
                                                │      │
-                                        Camera Module  │
+                                        Camera Module │
 ```
 
 ---
@@ -301,7 +301,7 @@ See [docs/SAFETY.md](docs/SAFETY.md) for complete pre-flight checklist.
 
 See [hardware/wiring/wiring_diagram.md](hardware/wiring/wiring_diagram.md) for complete pinout.
 
-Quick reference:
+Reference:
 
 ```
 F405 FC                     RPi Zero 2W
