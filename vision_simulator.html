@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Drop Pod — Vision Lock Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#07090f; --bg2:#0d1117; --bg3:#161b22; --bg4:#1c2128;
+  --border:#21262d; --border2:#30363d;
+  --text:#c9d1d9; --muted:#6e7681; --bright:#f0f6fc;
+  --accent:#f0883e; --blue:#58a6ff; --green:#3fb950;
+  --red:#f85149; --yellow:#e3b341; --purple:#bc8cff;
+  --mono:'Share Tech Mono',monospace;
+  --head:'Barlow Condensed',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;overflow-x:hidden;}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* TOPBAR */
+.topbar{
+  height:44px;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;padding:0 1.5rem;
+  position:sticky;top:0;z-index:100;
+}
+.logo{
+  display:flex;align-items:center;gap:0.5rem;
+  font-family:var(--head);font-weight:700;font-size:1rem;color:var(--bright);
+}
+.logo-diamond{
+  width:16px;height:16px;border:1.5px solid var(--accent);
+  transform:rotate(45deg);display:flex;align-items:center;justify-content:center;
+}
+.logo-diamond::after{content:'▼';transform:rotate(-45deg);color:var(--accent);font-size:5px;}
+.topbar-sep{color:var(--border2);font-size:1rem;}
+.topbar-title{font-size:11px;color:var(--muted);letter-spacing:0.05em;}
+.topbar-right{margin-left:auto;display:flex;gap:0.5rem;align-items:center;}
+.pill{font-size:9px;padding:0.15rem 0.5rem;border:1px solid;letter-spacing:0.1em;}
+.pill-orange{color:var(--accent);border-color:rgba(240,136,62,0.4);background:rgba(240,136,62,0.08);}
+.pill-red{color:var(--red);border-color:rgba(248,81,73,0.4);background:rgba(248,81,73,0.08);}
+.pill-green{color:var(--green);border-color:rgba(63,185,80,0.4);background:rgba(63,185,80,0.08);}
+.pill-blue{color:var(--blue);border-color:rgba(88,166,255,0.4);background:rgba(88,166,255,0.08);}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 300px;min-height:calc(100vh - 44px);}
+
+/* LEFT — VIDEO */
+.video-panel{
+  background:var(--bg);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+}
+.video-header{
+  padding:0.6rem 1rem;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:1rem;
+}
+.cam-status{display:flex;align-items:center;gap:0.4rem;font-size:10px;letter-spacing:0.1em;}
+.cam-dot{width:6px;height:6px;border-radius:50%;animation:blink 1.5s infinite;}
+.cam-dot.live{background:var(--green);}
+.cam-dot.searching{background:var(--yellow);}
+.cam-dot.off{background:var(--muted);}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.view-tabs{display:flex;gap:0;margin-left:auto;}
+.vtab{
+  font-size:10px;color:var(--muted);padding:0.2rem 0.7rem;
+  cursor:pointer;border:1px solid transparent;letter-spacing:0.05em;
+  transition:all 0.15s;
+}
+.vtab.active{color:var(--bright);border-color:var(--border2);background:var(--bg3);}
+.vtab:hover:not(.active){color:var(--text);}
+
+.canvas-container{
+  flex:1;position:relative;
+  background:#000;
+  display:flex;align-items:center;justify-content:center;
+  min-height:380px;
+}
+#videoEl{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;}
+#mainCanvas{width:100%;height:100%;display:block;object-fit:contain;}
+#maskCanvas{width:100%;height:100%;display:none;object-fit:contain;}
+
+.no-cam{
+  text-align:center;padding:2rem;
+  display:flex;flex-direction:column;align-items:center;gap:1rem;
+}
+.no-cam-icon{font-size:3rem;opacity:0.3;}
+.no-cam h3{font-family:var(--head);font-weight:700;font-size:1.2rem;color:var(--bright);}
+.no-cam p{font-size:11px;color:var(--muted);line-height:1.6;max-width:280px;}
+
+.start-btn{
+  background:var(--accent);color:#000;border:none;
+  font-family:var(--head);font-weight:700;font-size:1rem;
+  letter-spacing:0.1em;padding:0.6rem 2rem;cursor:pointer;
+  transition:opacity 0.15s;
+}
+.start-btn:hover{opacity:0.85;}
+
+/* OVERLAY INFO */
+.video-footer{
+  padding:0.5rem 1rem;
+  background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;gap:1.5rem;align-items:center;
+}
+.stat-item{display:flex;flex-direction:column;gap:0.1rem;}
+.stat-label{font-size:9px;color:var(--muted);letter-spacing:0.15em;}
+.stat-value{font-size:13px;color:var(--bright);font-weight:600;}
+.stat-value.locked{color:var(--green);}
+.stat-value.hunting{color:var(--yellow);}
+.stat-value.no-lock{color:var(--red);}
+
+/* RIGHT — TELEMETRY PANEL */
+.right-panel{
+  background:var(--bg2);
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.panel-section{
+  padding:1rem;
+  border-bottom:1px solid var(--border);
+}
+.panel-label{
+  font-size:9px;letter-spacing:0.2em;color:var(--muted);
+  margin-bottom:0.75rem;text-transform:uppercase;
+}
+
+/* LOCK INDICATOR */
+.lock-indicator{
+  background:var(--bg3);border:1px solid var(--border);
+  padding:1rem;text-align:center;margin-bottom:0.75rem;
+  position:relative;overflow:hidden;
+  transition:border-color 0.3s,background 0.3s;
+}
+.lock-indicator.locked{
+  border-color:var(--green);
+  background:rgba(63,185,80,0.08);
+}
+.lock-indicator.locked::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at center,rgba(63,185,80,0.12) 0%,transparent 70%);
+}
+.lock-state{
+  font-family:var(--head);font-weight:900;font-size:1.8rem;
+  color:var(--red);letter-spacing:0.05em;
+  transition:color 0.3s;
+  position:relative;
+}
+.lock-state.locked{color:var(--green);}
+.lock-state.hunting{color:var(--yellow);}
+.lock-sub{font-size:9px;color:var(--muted);letter-spacing:0.15em;margin-top:0.2rem;}
+
+/* CONFIDENCE BAR */
+.conf-bar-wrap{margin-bottom:0.75rem;}
+.conf-bar-label{display:flex;justify-content:space-between;margin-bottom:0.3rem;font-size:10px;}
+.conf-bar-key{color:var(--muted);}
+.conf-bar-val{color:var(--bright);font-weight:600;}
+.conf-bar-track{
+  height:6px;background:var(--bg4);border:1px solid var(--border);
+  position:relative;overflow:hidden;
+}
+.conf-bar-fill{
+  height:100%;width:0%;
+  background:var(--red);
+  transition:width 0.1s,background 0.3s;
+}
+.conf-bar-fill.good{background:var(--green);}
+.conf-bar-fill.medium{background:var(--yellow);}
+.threshold-mark{
+  position:absolute;top:0;bottom:0;width:1px;background:var(--accent);
+  left:80%;
+}
+
+/* CORRECTION DISPLAY */
+.correction-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;
+  margin-bottom:0.5rem;
+}
+.corr-card{
+  background:var(--bg3);border:1px solid var(--border);padding:0.6rem;
+  text-align:center;
+}
+.corr-axis{font-size:9px;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.2rem;}
+.corr-val{font-size:1.2rem;color:var(--blue);font-family:var(--head);font-weight:700;}
+.corr-val.pos{color:var(--green);}
+.corr-val.neg{color:var(--red);}
+.corr-unit{font-size:9px;color:var(--muted);}
+
+/* CROSSHAIR INDICATOR */
+.crosshair-display{
+  background:var(--bg3);border:1px solid var(--border);
+  padding:0.75rem;margin-bottom:0.5rem;
+  position:relative;
+}
+#mini-map{width:100%;height:80px;display:block;}
+
+/* HSV TUNING */
+.hsv-row{margin-bottom:0.6rem;}
+.hsv-label{
+  display:flex;justify-content:space-between;
+  font-size:10px;color:var(--muted);margin-bottom:0.2rem;
+}
+.hsv-label span{color:var(--bright);}
+input[type=range]{
+  width:100%;height:3px;
+  -webkit-appearance:none;appearance:none;
+  background:var(--border2);outline:none;border-radius:0;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:12px;height:12px;
+  background:var(--accent);cursor:pointer;border-radius:0;
+}
+input[type=range]::-moz-range-thumb{
+  width:12px;height:12px;background:var(--accent);
+  cursor:pointer;border:none;border-radius:0;
+}
+
+/* LOG */
+.log-area{
+  font-size:10px;line-height:1.8;
+  max-height:180px;overflow-y:auto;
+  padding:0.5rem;
+  background:var(--bg);border:1px solid var(--border);
+}
+.log-line{padding:0.05rem 0;}
+.log-line .ts{color:var(--muted);}
+.log-line .msg{color:var(--text);}
+.log-line.ok .msg{color:var(--green);}
+.log-line.warn .msg{color:var(--yellow);}
+.log-line.err .msg{color:var(--red);}
+.log-line.info .msg{color:var(--blue);}
+
+/* STATE MACHINE */
+.fsm-states{display:flex;gap:0;margin-bottom:0.5rem;}
+.fsm-state{
+  flex:1;text-align:center;padding:0.3rem 0.2rem;
+  background:var(--bg3);border:1px solid var(--border);
+  font-family:var(--head);font-size:9px;font-weight:700;
+  color:var(--muted);letter-spacing:0.05em;
+  transition:all 0.2s;
+}
+.fsm-state.active{background:rgba(240,136,62,0.15);color:var(--accent);border-color:var(--accent);}
+.fsm-state.done{background:rgba(63,185,80,0.1);color:var(--green);border-color:var(--green);}
+
+/* FRAME RATE */
+.perf-row{display:flex;justify-content:space-between;font-size:10px;padding:0.2rem 0;}
+.perf-key{color:var(--muted);}
+.perf-val{color:var(--bright);}
+
+@media(max-width:700px){
+  .layout{grid-template-columns:1fr;}
+  .right-panel{max-height:60vh;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-diamond"></div>
+    DROP POD
+  </div>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-title">VISION LOCK SIMULATOR — v1.0</span>
+  <div class="topbar-right">
+    <span class="pill pill-orange" id="phase-pill">IDLE</span>
+    <span class="pill pill-blue" id="fps-pill">0 FPS</span>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- LEFT: VIDEO PANEL -->
+<div class="video-panel">
+  <div class="video-header">
+    <div class="cam-status">
+      <div class="cam-dot off" id="cam-dot"></div>
+      <span id="cam-label">CAMERA OFFLINE</span>
+    </div>
+    <div class="view-tabs">
+      <div class="vtab active" onclick="setView('live',this)">LIVE</div>
+      <div class="vtab" onclick="setView('mask',this)">MASK</div>
+    </div>
+    <span style="color:var(--muted);font-size:10px;margin-left:0.5rem;" id="res-label"></span>
+  </div>
+
+  <div class="canvas-container" id="canvas-wrap">
+    <video id="videoEl" autoplay playsinline muted></video>
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="maskCanvas"></canvas>
+
+    <!-- No cam overlay -->
+    <div class="no-cam" id="no-cam-overlay">
+      <div class="no-cam-icon">📷</div>
+      <h3>WEBCAM REQUIRED</h3>
+      <p>Connect a webcam and click START. Hold any red object (carpet, cloth, paper) in front of the camera to simulate the target lock.</p>
+      <button class="start-btn" onclick="startCamera()">▶ START CAMERA</button>
+      <p style="font-size:10px;color:var(--muted);margin-top:0.5rem;">This runs entirely in your browser. No data is sent anywhere.</p>
+    </div>
+  </div>
+
+  <div class="video-footer">
+    <div class="stat-item">
+      <span class="stat-label">LOCK STATE</span>
+      <span class="stat-value no-lock" id="foot-state">NO LOCK</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">CONFIDENCE</span>
+      <span class="stat-value" id="foot-conf">0.00</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">CENTROID</span>
+      <span class="stat-value" id="foot-cent">—</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">BLOB AREA</span>
+      <span class="stat-value" id="foot-area">0 px²</span>
+    </div>
+    <div class="stat-item" style="margin-left:auto;">
+      <span class="stat-label">ROLL CMD</span>
+      <span class="stat-value" id="foot-roll">+0.0°</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">PITCH CMD</span>
+      <span class="stat-value" id="foot-pitch">+0.0°</span>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT: TELEMETRY PANEL -->
+<div class="right-panel">
+
+  <!-- STATE MACHINE -->
+  <div class="panel-section">
+    <div class="panel-label">Mission State</div>
+    <div class="fsm-states">
+      <div class="fsm-state done" id="fsm-idle">IDLE</div>
+      <div class="fsm-state done" id="fsm-gps">GPS</div>
+      <div class="fsm-state active" id="fsm-cam">CAM</div>
+      <div class="fsm-state" id="fsm-lock">LOCK</div>
+      <div class="fsm-state" id="fsm-land">LAND</div>
+    </div>
+    <div style="font-size:10px;color:var(--muted);">Simulating: optical guidance phase (40m AGL)</div>
+  </div>
+
+  <!-- LOCK STATUS -->
+  <div class="panel-section">
+    <div class="panel-label">Target Lock</div>
+    <div class="lock-indicator" id="lock-indicator">
+      <div class="lock-state" id="lock-state">NO LOCK</div>
+      <div class="lock-sub" id="lock-sub">SEARCHING FOR RED TARGET</div>
+    </div>
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-label">
+        <span class="conf-bar-key">CONFIDENCE</span>
+        <span class="conf-bar-val" id="conf-pct">0%</span>
+      </div>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill" id="conf-bar"></div>
+        <div class="threshold-mark" title="Lock threshold: 80%"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;font-size:9px;color:var(--accent);margin-top:2px;">▲ LOCK THRESHOLD 80%</div>
+    </div>
+
+    <!-- Consecutive frames -->
+    <div style="display:flex;gap:3px;margin-bottom:0.5rem;" id="frame-dots">
+    </div>
+    <div style="font-size:9px;color:var(--muted);">Lock requires 5 consecutive frames above 80%</div>
+  </div>
+
+  <!-- OPTICAL CORRECTIONS -->
+  <div class="panel-section">
+    <div class="panel-label">Optical Corrections → FC</div>
+    <div class="correction-grid">
+      <div class="corr-card">
+        <div class="corr-axis">ROLL ΔΘ</div>
+        <div class="corr-val" id="corr-roll">+0.0</div>
+        <div class="corr-unit">degrees</div>
+      </div>
+      <div class="corr-card">
+        <div class="corr-axis">PITCH ΔΘ</div>
+        <div class="corr-val" id="corr-pitch">+0.0</div>
+        <div class="corr-unit">degrees</div>
+      </div>
+    </div>
+    <div class="corr-card" style="margin-bottom:0.5rem;">
+      <div class="corr-axis">MAVLink → FC</div>
+      <div style="font-size:10px;color:var(--blue);margin-top:0.3rem;font-family:var(--mono);" id="mavlink-msg">
+        NAMED_VALUE_FLOAT("VIS_ROLL", 0.0)<br/>
+        NAMED_VALUE_FLOAT("VIS_PTCH", 0.0)
+      </div>
+    </div>
+  </div>
+
+  <!-- MINI CROSSHAIR MAP -->
+  <div class="panel-section">
+    <div class="panel-label">Frame Centroid Position</div>
+    <div class="crosshair-display">
+      <canvas id="mini-map" height="80"></canvas>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:0.3rem;">
+      <span>err_x: <span style="color:var(--bright)" id="err-x">0.00</span></span>
+      <span>err_y: <span style="color:var(--bright)" id="err-y">0.00</span></span>
+    </div>
+  </div>
+
+  <!-- HSV TUNING -->
+  <div class="panel-section">
+    <div class="panel-label">HSV Threshold Tuning</div>
+
+    <div class="hsv-row">
+      <div class="hsv-label">Hue Low 1 (range 1 start) <span id="v-hl1">0</span></div>
+      <input type="range" min="0" max="30" value="0" id="sl-hl1" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Hue High 1 (range 1 end) <span id="v-hh1">12</span></div>
+      <input type="range" min="5" max="40" value="12" id="sl-hh1" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Hue Low 2 (range 2 start) <span id="v-hl2">165</span></div>
+      <input type="range" min="140" max="175" value="165" id="sl-hl2" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Hue High 2 (range 2 end) <span id="v-hh2">180</span></div>
+      <input type="range" min="165" max="180" value="180" id="sl-hh2" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Min Saturation <span id="v-sat">100</span></div>
+      <input type="range" min="30" max="255" value="100" id="sl-sat" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Min Value (brightness) <span id="v-val">60</span></div>
+      <input type="range" min="20" max="255" value="60" id="sl-val" oninput="updateHSV()"/>
+    </div>
+    <div class="hsv-row">
+      <div class="hsv-label">Min Blob Area (px²) <span id="v-area">400</span></div>
+      <input type="range" min="50" max="5000" value="400" step="50" id="sl-area" oninput="updateHSV()"/>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="panel-section">
+    <div class="panel-label">Performance</div>
+    <div class="perf-row"><span class="perf-key">FRAME RATE</span><span class="perf-val" id="perf-fps">— fps</span></div>
+    <div class="perf-row"><span class="perf-key">PROCESS TIME</span><span class="perf-val" id="perf-ms">— ms</span></div>
+    <div class="perf-row"><span class="perf-key">FRAME SIZE</span><span class="perf-val" id="perf-res">—</span></div>
+    <div class="perf-row"><span class="perf-key">BLOB PIXELS</span><span class="perf-val" id="perf-blob">0</span></div>
+    <div class="perf-row"><span class="perf-key">LOCK FRAMES</span><span class="perf-val" id="perf-lockf">0 / 5</span></div>
+  </div>
+
+  <!-- EVENT LOG -->
+  <div class="panel-section">
+    <div class="panel-label">Event Log</div>
+    <div class="log-area" id="log-area"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const videoEl    = document.getElementById('videoEl');
+const mainCanvas = document.getElementById('mainCanvas');
+const maskCanvas = document.getElementById('maskCanvas');
+const ctx        = mainCanvas.getContext('2d');
+const mctx       = maskCanvas.getContext('2d');
+const miniCtx    = document.getElementById('mini-map').getContext('2d');
+
+let running      = false;
+let frameCount   = 0;
+let fpsTimer     = 0;
+let fps          = 0;
+let lockFrames   = 0;
+let locked       = false;
+let currentView  = 'live';
+
+// HSV thresholds (tunable)
+let HSV = {hl1:0,hh1:12,hl2:165,hh2:180,sat:100,val:60,minArea:400};
+
+// Guidance params (from config.py)
+const KV_LAT     = 0.4;
+const KV_PITCH   = 0.15;
+const MAX_CORR   = 15.0;
+const FOV_H      = 102.0;
+const FOV_V      = 67.0;
+const MIN_CONF   = 0.80;
+const MIN_FRAMES = 5;
+
+let log_lines = [];
+
+function log(msg, type='info'){
+  const ts = new Date().toTimeString().slice(0,8);
+  log_lines.unshift({ts, msg, type});
+  if(log_lines.length > 80) log_lines.pop();
+  const el = document.getElementById('log-area');
+  el.innerHTML = log_lines.slice(0,30).map(l=>
+    `<div class="log-line ${l.type}"><span class="ts">[${l.ts}]</span> <span class="msg">${l.msg}</span></div>`
+  ).join('');
+}
+
+async function startCamera(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:1280},height:{ideal:720},facingMode:'environment'}
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+    document.getElementById('no-cam-overlay').style.display='none';
+    document.getElementById('cam-dot').className='cam-dot live';
+    document.getElementById('cam-label').textContent='CAMERA LIVE';
+    running = true;
+    log('Camera opened — pipeline active','ok');
+    log('Dual-range HSV red mask initialised','info');
+    log(`Thresholds: H[0-${HSV.hh1}]∪[${HSV.hl2}-180] S>${HSV.sat} V>${HSV.val}`,'info');
+    requestAnimationFrame(processFrame);
+  } catch(e){
+    log('Camera access denied: '+e.message,'err');
+    alert('Camera access denied. Please allow camera permissions and reload.');
+  }
+}
+
+// ── BGR→HSV (JavaScript implementation) ─────────────────────
+function rgbToHsv(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  const d=max-min;
+  let h=0,s=max===0?0:d/max,v=max;
+  if(d!==0){
+    switch(max){
+      case r: h=((g-b)/d+(g<b?6:0))/6; break;
+      case g: h=((b-r)/d+2)/6; break;
+      case b: h=((r-g)/d+4)/6; break;
+    }
+  }
+  return [h*180, s*255, v*255];  // OpenCV scale: H 0-180
+}
+
+// ── MAIN PROCESSING LOOP ─────────────────────────────────────
+function processFrame(now){
+  if(!running){return;}
+  requestAnimationFrame(processFrame);
+
+  const vw=videoEl.videoWidth, vh=videoEl.videoHeight;
+  if(!vw||!vh) return;
+
+  // Set canvas sizes
+  if(mainCanvas.width!==vw){
+    mainCanvas.width=vw; mainCanvas.height=vh;
+    maskCanvas.width=vw; maskCanvas.height=vh;
+    document.getElementById('res-label').textContent=`${vw}×${vh}`;
+    document.getElementById('perf-res').textContent=`${vw}×${vh}`;
+    log(`Camera resolution: ${vw}×${vh}`,'info');
+  }
+
+  const t0=performance.now();
+
+  // Draw video to canvas
+  ctx.drawImage(videoEl,0,0,vw,vh);
+
+  // Get pixel data for processing
+  const PW=Math.floor(vw/2), PH=Math.floor(vh/2); // process at half res
+  ctx.drawImage(videoEl,0,0,PW,PH);
+  const imgData=ctx.getImageData(0,0,PW,PH);
+  ctx.drawImage(videoEl,0,0,vw,vh); // restore full
+
+  const data=imgData.data;
+  const maskData=new Uint8ClampedArray(PW*PH*4);
+
+  let blobPixels=0;
+  let sumX=0,sumY=0;
+  let minBx=PW,minBy=PH,maxBx=0,maxBy=0;
+
+  // ── HSV masking ──────────────────────────────────────────
+  for(let y=0;y<PH;y++){
+    for(let x=0;x<PW;x++){
+      const i=(y*PW+x)*4;
+      const r=data[i],g=data[i+1],b=data[i+2];
+      const [h,s,v]=rgbToHsv(r,g,b);
+
+      const redMask = s>HSV.sat && v>HSV.val &&
+        ((h>=HSV.hl1 && h<=HSV.hh1) || (h>=HSV.hl2 && h<=HSV.hh2));
+
+      if(redMask){
+        maskData[i]=255; maskData[i+1]=0; maskData[i+2]=0; maskData[i+3]=255;
+        blobPixels++;
+        sumX+=x; sumY+=y;
+        if(x<minBx)minBx=x; if(x>maxBx)maxBx=x;
+        if(y<minBy)minBy=y; if(y>maxBy)maxBy=y;
+      } else {
+        maskData[i]=0; maskData[i+1]=0; maskData[i+2]=0; maskData[i+3]=255;
+      }
+    }
+  }
+
+  // Scale area to full resolution equivalent
+  const areaFullRes = blobPixels * 4;
+
+  // ── Centroid + BBox ──────────────────────────────────────
+  let cx=null,cy=null,bbox=null;
+  if(blobPixels > HSV.minArea/4){  // minArea scaled to half-res
+    cx=(sumX/blobPixels)*(vw/PW);
+    cy=(sumY/blobPixels)*(vh/PH);
+    bbox={x:minBx*(vw/PW),y:minBy*(vh/PH),
+          w:(maxBx-minBx)*(vw/PW),h:(maxBy-minBy)*(vh/PH)};
+  }
+
+  // ── Confidence ───────────────────────────────────────────
+  let confidence=0;
+  if(cx!==null && bbox){
+    const bw=maxBx-minBx, bh=maxBy-minBy;
+    const aspect=bw>0&&bh>0?Math.min(bw,bh)/Math.max(bw,bh):0;
+    const areaScore=Math.min(1.0,blobPixels/(PW*PH*0.10));
+    const hull_approx = bw*bh;
+    const solidity = hull_approx>0?Math.min(1,blobPixels/hull_approx):0;
+    confidence = 0.4*solidity + 0.3*aspect + 0.3*areaScore;
+    confidence = Math.min(1.0, confidence);
+  }
+
+  // ── Lock state management ────────────────────────────────
+  const wasLocked=locked;
+  if(confidence >= MIN_CONF){
+    lockFrames=Math.min(MIN_FRAMES, lockFrames+1);
+  } else {
+    lockFrames=Math.max(0, lockFrames-1);
+  }
+  locked = lockFrames >= MIN_FRAMES;
+
+  if(!wasLocked && locked) log('TARGET LOCKED — optical corrections active','ok');
+  if(wasLocked && !locked) log('Lock lost — searching','warn');
+
+  // ── Optical corrections ──────────────────────────────────
+  let rollCmd=0, pitchCmd=0, errX=0, errY=0;
+  if(cx!==null){
+    errX=(cx-vw/2)/(vw/2);
+    errY=(cy-vh/2)/(vh/2);
+    const angX=errX*(FOV_H/2);
+    const angY=errY*(FOV_V/2);
+    rollCmd=Math.max(-MAX_CORR,Math.min(MAX_CORR, angX*KV_LAT));
+    pitchCmd=Math.max(-MAX_CORR,Math.min(MAX_CORR, angY*KV_PITCH));
+  }
+
+  const dt=performance.now()-t0;
+
+  // ── FPS counter ──────────────────────────────────────────
+  frameCount++;
+  if(now-fpsTimer>=1000){
+    fps=frameCount; frameCount=0; fpsTimer=now;
+    document.getElementById('fps-pill').textContent=fps+' FPS';
+    document.getElementById('perf-fps').textContent=fps+' fps';
+  }
+
+  // ── RENDERING ────────────────────────────────────────────
+  if(currentView==='live'){
+    ctx.drawImage(videoEl,0,0,vw,vh);
+
+    // Draw mask overlay (transparent red)
+    const overlayData=ctx.createImageData(PW,PH);
+    for(let i=0;i<PW*PH*4;i+=4){
+      if(maskData[i]===255){
+        overlayData.data[i]=255;
+        overlayData.data[i+1]=0;
+        overlayData.data[i+2]=0;
+        overlayData.data[i+3]=90;
+      }
+    }
+    const tmpC=document.createElement('canvas'); tmpC.width=PW; tmpC.height=PH;
+    const tmpX=tmpC.getContext('2d');
+    tmpX.putImageData(overlayData,0,0);
+    ctx.drawImage(tmpC,0,0,vw,vh);
+
+    if(cx!==null && bbox){
+      // Bounding box
+      const bc=locked?'#3fb950':(confidence>0.5?'#e3b341':'#f85149');
+      ctx.strokeStyle=bc; ctx.lineWidth=2;
+      ctx.strokeRect(bbox.x,bbox.y,bbox.w,bbox.h);
+
+      // Corner accents
+      const clen=20;
+      ctx.strokeStyle=bc; ctx.lineWidth=3;
+      [[bbox.x,bbox.y],[bbox.x+bbox.w,bbox.y],[bbox.x,bbox.y+bbox.h],[bbox.x+bbox.w,bbox.y+bbox.h]].forEach(([px,py],qi)=>{
+        const sx=(qi%2===0)?1:-1, sy=(qi<2)?1:-1;
+        ctx.beginPath(); ctx.moveTo(px,py+sy*clen); ctx.lineTo(px,py); ctx.lineTo(px+sx*clen,py);
+        ctx.stroke();
+      });
+
+      // Centroid
+      ctx.strokeStyle=locked?'#3fb950':'#e3b341';
+      ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(cx-18,cy); ctx.lineTo(cx+18,cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,cy-18); ctx.lineTo(cx,cy+18); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.stroke();
+
+      // Error line from centre
+      ctx.strokeStyle='rgba(63,185,80,0.7)'; ctx.lineWidth=1.5;
+      ctx.setLineDash([5,3]);
+      ctx.beginPath(); ctx.moveTo(vw/2,vh/2); ctx.lineTo(cx,cy); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Frame centre crosshair
+    ctx.strokeStyle='rgba(88,166,255,0.5)'; ctx.lineWidth=1;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(vw/2-24,vh/2); ctx.lineTo(vw/2+24,vh/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(vw/2,vh/2-24); ctx.lineTo(vw/2,vh/2+24); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // HUD overlay top-left
+    ctx.fillStyle='rgba(7,9,15,0.75)';
+    ctx.fillRect(8,8,200,90);
+    ctx.fillStyle=locked?'#3fb950':(confidence>MIN_CONF?'#e3b341':'#f85149');
+    ctx.font='bold 13px "Share Tech Mono"';
+    ctx.fillText(locked?'▶ TARGET LOCKED':'◉ SEARCHING',16,28);
+    ctx.fillStyle='#8b949e'; ctx.font='11px "Share Tech Mono"';
+    ctx.fillText(`CONF:  ${(confidence*100).toFixed(1)}%`,16,46);
+    ctx.fillText(`ROLL:  ${rollCmd>=0?'+':''}${rollCmd.toFixed(2)}°`,16,62);
+    ctx.fillText(`PITCH: ${pitchCmd>=0?'+':''}${pitchCmd.toFixed(2)}°`,16,78);
+    if(cx!==null){
+      ctx.fillText(`CX: ${cx.toFixed(0)}  CY: ${cy.toFixed(0)}`,16,94);
+      ctx.fillRect(8,8,200,100);
+    }
+
+    // Confidence arc
+    drawConfArc(ctx,vw-60,60,42,confidence,locked);
+
+  } else {
+    // MASK VIEW
+    mctx.fillStyle='#000';
+    mctx.fillRect(0,0,vw,vh);
+    const tmp2=document.createElement('canvas'); tmp2.width=PW; tmp2.height=PH;
+    const t2=tmp2.getContext('2d');
+    const m2=t2.createImageData(PW,PH);
+    for(let i=0;i<PW*PH*4;i+=4){
+      if(maskData[i]===255){
+        m2.data[i]=255; m2.data[i+1]=255; m2.data[i+2]=255; m2.data[i+3]=255;
+      } else {
+        m2.data[i+3]=255;
+      }
+    }
+    t2.putImageData(m2,0,0);
+    mctx.drawImage(tmp2,0,0,vw,vh);
+    if(cx!==null && bbox){
+      mctx.strokeStyle='#3fb950'; mctx.lineWidth=2;
+      mctx.strokeRect(bbox.x,bbox.y,bbox.w,bbox.h);
+      mctx.strokeStyle='#f0883e'; mctx.lineWidth=2;
+      mctx.beginPath(); mctx.arc(cx,cy,8,0,Math.PI*2); mctx.stroke();
+    }
+  }
+
+  // ── UPDATE UI ────────────────────────────────────────────
+  updateUI(confidence,lockFrames,locked,cx,cy,rollCmd,pitchCmd,errX,errY,areaFullRes,dt,vw,vh);
+}
+
+function drawConfArc(ctx,x,y,r,conf,locked){
+  const start=-Math.PI/2, end=start+(2*Math.PI*conf);
+  ctx.strokeStyle='rgba(30,35,45,0.85)'; ctx.lineWidth=6;
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.stroke();
+  ctx.strokeStyle=locked?'#3fb950':(conf>0.5?'#e3b341':'#f85149');
+  ctx.lineWidth=6;
+  ctx.beginPath(); ctx.arc(x,y,r,start,end); ctx.stroke();
+  ctx.fillStyle='rgba(7,9,15,0.85)';
+  ctx.beginPath(); ctx.arc(x,y,r-8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=locked?'#3fb950':'#c9d1d9';
+  ctx.font='bold 12px "Share Tech Mono"';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText((conf*100).toFixed(0)+'%',x,y);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
+function updateUI(conf,lf,locked,cx,cy,roll,pitch,ex,ey,area,dt,vw,vh){
+  // Lock indicator
+  const lockEl=document.getElementById('lock-indicator');
+  const stateEl=document.getElementById('lock-state');
+  const subEl=document.getElementById('lock-sub');
+  if(locked){
+    lockEl.className='lock-indicator locked';
+    stateEl.className='lock-state locked'; stateEl.textContent='LOCKED';
+    subEl.textContent='OPTICAL CORRECTIONS ACTIVE → FC';
+    document.getElementById('phase-pill').textContent='OPTICAL';
+    document.getElementById('phase-pill').className='pill pill-green';
+    document.getElementById('fsm-lock').className='fsm-state active';
+  } else if(conf>0.3){
+    lockEl.className='lock-indicator';
+    stateEl.className='lock-state hunting'; stateEl.textContent='HUNTING';
+    subEl.textContent=`DETECTING... ${(conf*100).toFixed(0)}% CONFIDENCE`;
+    document.getElementById('phase-pill').textContent='HUNTING';
+    document.getElementById('phase-pill').className='pill pill-orange';
+    document.getElementById('fsm-lock').className='fsm-state';
+  } else {
+    lockEl.className='lock-indicator';
+    stateEl.className='lock-state'; stateEl.textContent='NO LOCK';
+    subEl.textContent='SEARCHING FOR RED TARGET';
+    document.getElementById('phase-pill').textContent='SEARCHING';
+    document.getElementById('phase-pill').className='pill pill-red';
+    document.getElementById('fsm-lock').className='fsm-state';
+  }
+
+  // Conf bar
+  const pct=Math.round(conf*100);
+  document.getElementById('conf-pct').textContent=pct+'%';
+  const bar=document.getElementById('conf-bar');
+  bar.style.width=pct+'%';
+  bar.className='conf-bar-fill'+(pct>=80?' good':pct>=40?' medium':'');
+
+  // Frame dots
+  const dots=document.getElementById('frame-dots');
+  dots.innerHTML='';
+  for(let i=0;i<5;i++){
+    const d=document.createElement('div');
+    d.style.cssText=`width:12px;height:12px;border:1px solid ${i<lf?'var(--green)':'var(--border2)'};background:${i<lf?'rgba(63,185,80,0.25)':'transparent'};transition:all 0.15s;`;
+    dots.appendChild(d);
+  }
+
+  // Corrections
+  const rv=document.getElementById('corr-roll');
+  rv.textContent=(roll>=0?'+':'')+roll.toFixed(2);
+  rv.className='corr-val'+(roll>0.5?' pos':roll<-0.5?' neg':'');
+  const pv=document.getElementById('corr-pitch');
+  pv.textContent=(pitch>=0?'+':'')+pitch.toFixed(2);
+  pv.className='corr-val'+(pitch>0.5?' pos':pitch<-0.5?' neg':'');
+
+  // MAVLink msg display
+  document.getElementById('mavlink-msg').innerHTML=
+    `NAMED_VALUE_FLOAT(<span style="color:var(--blue)">"VIS_ROLL"</span>, <span style="color:${locked?'var(--green)':'var(--muted)'}">` +
+    `${(roll>=0?'+':'')}${roll.toFixed(3)}</span>)<br/>` +
+    `NAMED_VALUE_FLOAT(<span style="color:var(--blue)">"VIS_PTCH"</span>, <span style="color:${locked?'var(--green)':'var(--muted)'}">` +
+    `${(pitch>=0?'+':'')}${pitch.toFixed(3)}</span>)`;
+
+  // Footer stats
+  document.getElementById('foot-state').textContent=locked?'LOCKED':conf>0.3?'HUNTING':'NO LOCK';
+  document.getElementById('foot-state').className='stat-value '+(locked?'locked':conf>0.3?'hunting':'no-lock');
+  document.getElementById('foot-conf').textContent=conf.toFixed(3);
+  document.getElementById('foot-roll').textContent=(roll>=0?'+':'')+roll.toFixed(2)+'°';
+  document.getElementById('foot-pitch').textContent=(pitch>=0?'+':'')+pitch.toFixed(2)+'°';
+  if(cx!==null){
+    document.getElementById('foot-cent').textContent=`${cx.toFixed(0)}, ${cy.toFixed(0)}`;
+    document.getElementById('foot-area').textContent=area.toFixed(0)+' px²';
+    document.getElementById('err-x').textContent=ex.toFixed(3);
+    document.getElementById('err-y').textContent=ey.toFixed(3);
+  }
+
+  // Perf
+  document.getElementById('perf-ms').textContent=dt.toFixed(1)+' ms';
+  document.getElementById('perf-blob').textContent=(area||0).toFixed(0);
+  document.getElementById('perf-lockf').textContent=lf+' / 5';
+
+  // Mini map
+  drawMiniMap(cx,cy,vw,vh,roll,pitch,locked);
+}
+
+function drawMiniMap(cx,cy,vw,vh,roll,pitch,locked){
+  const mw=document.getElementById('mini-map').width;
+  const mh=80;
+  miniCtx.clearRect(0,0,mw,mh);
+  miniCtx.fillStyle='rgba(13,17,23,0.8)';
+  miniCtx.fillRect(0,0,mw,mh);
+
+  // Grid
+  miniCtx.strokeStyle='rgba(48,54,61,0.6)'; miniCtx.lineWidth=0.5;
+  [0.25,0.5,0.75].forEach(f=>{
+    miniCtx.beginPath(); miniCtx.moveTo(f*mw,0); miniCtx.lineTo(f*mw,mh); miniCtx.stroke();
+    miniCtx.beginPath(); miniCtx.moveTo(0,f*mh); miniCtx.lineTo(mw,f*mh); miniCtx.stroke();
+  });
+
+  // Centre crosshair
+  miniCtx.strokeStyle='rgba(88,166,255,0.5)'; miniCtx.lineWidth=1;
+  miniCtx.beginPath(); miniCtx.moveTo(mw/2-10,mh/2); miniCtx.lineTo(mw/2+10,mh/2); miniCtx.stroke();
+  miniCtx.beginPath(); miniCtx.moveTo(mw/2,mh/2-10); miniCtx.lineTo(mw/2,mh/2+10); miniCtx.stroke();
+
+  if(cx!==null && vw>0){
+    const mx=cx/vw*mw, my=cy/vh*mh;
+    // Error line
+    miniCtx.strokeStyle=locked?'rgba(63,185,80,0.6)':'rgba(240,136,62,0.6)';
+    miniCtx.lineWidth=1;
+    miniCtx.setLineDash([3,2]);
+    miniCtx.beginPath(); miniCtx.moveTo(mw/2,mh/2); miniCtx.lineTo(mx,my); miniCtx.stroke();
+    miniCtx.setLineDash([]);
+    // Centroid dot
+    miniCtx.fillStyle=locked?'#3fb950':'#e3b341';
+    miniCtx.beginPath(); miniCtx.arc(mx,my,4,0,Math.PI*2); miniCtx.fill();
+  }
+}
+
+function updateHSV(){
+  HSV.hl1=+document.getElementById('sl-hl1').value;
+  HSV.hh1=+document.getElementById('sl-hh1').value;
+  HSV.hl2=+document.getElementById('sl-hl2').value;
+  HSV.hh2=+document.getElementById('sl-hh2').value;
+  HSV.sat=+document.getElementById('sl-sat').value;
+  HSV.val=+document.getElementById('sl-val').value;
+  HSV.minArea=+document.getElementById('sl-area').value;
+  document.getElementById('v-hl1').textContent=HSV.hl1;
+  document.getElementById('v-hh1').textContent=HSV.hh1;
+  document.getElementById('v-hl2').textContent=HSV.hl2;
+  document.getElementById('v-hh2').textContent=HSV.hh2;
+  document.getElementById('v-sat').textContent=HSV.sat;
+  document.getElementById('v-val').textContent=HSV.val;
+  document.getElementById('v-area').textContent=HSV.minArea;
+}
+
+function setView(v, el){
+  currentView=v;
+  document.querySelectorAll('.vtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  mainCanvas.style.display=(v==='live')?'block':'none';
+  maskCanvas.style.display=(v==='mask')?'block':'none';
+}
+
+// Initial log entries
+log('Drop Pod Vision Simulator loaded','info');
+log('Waiting for camera access...','warn');
+log('Point camera at RED object to simulate lock','info');
+</script>
+</body>
+</html>
