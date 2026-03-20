@@ -1,4 +1,4 @@
-# 🎯 DROP POD — Precision Aerial Delivery System
+#  DROP POD — Precision Aerial Delivery System
 
 <p align="center">
   <img src="docs/assets/banner.svg" alt="Drop Pod Banner" width="700"/>
@@ -18,7 +18,7 @@
 
 ---
 
-## 📖 Table of Contents
+##  Table of Contents
 
 1. [What This Is](#what-this-is)
 2. [How It Works](#how-it-works)
@@ -438,7 +438,7 @@ See [docs/TUNING.md](docs/TUNING.md) for full procedure. Key steps:
 
 ## Safety & Legal
 
-⚠️ **Read [docs/SAFETY.md](docs/SAFETY.md) before any field test.**
+ **Read [docs/SAFETY.md](docs/SAFETY.md) before any field test.**
 
 - This system drops a ~650g object from altitude. Treat it as a **projectile**.
 - Always operate in a **cleared, controlled area** with ground personnel outside the drop radius.
